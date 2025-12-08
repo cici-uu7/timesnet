@@ -819,3 +819,73 @@ class Dataset_CWRU(Dataset):
     def inverse_transform(self, data):
         """数据反标准化（用于需要原始尺度的场景）"""
         return self.scaler.inverse_transform(data)
+
+
+class CWRUADLoader(Dataset):
+    """
+    CWRU 异常检测专用 Loader
+    预期数据目录结构:
+    dataset/CWRU_AD/
+        ├── train.csv (仅包含正常数据，用于训练)
+        ├── test.csv  (包含正常+异常数据，用于测试)
+        └── test_label.csv (对应 test.csv 的标签，0=正常, 1=异常)
+    """
+
+    def __init__(self, args, root_path, win_size, step=1, flag="train"):
+        self.flag = flag
+        self.step = step
+        self.win_size = win_size
+        self.scaler = StandardScaler()
+
+        # 1. 加载训练数据 (Normal Only)
+        # 注意：这里读取的是我们预处理生成的 train.csv
+        data = pd.read_csv(os.path.join(root_path, 'train.csv'))
+        data = data.values[:, 0:]  # 取所有列 (预处理脚本只生成了一列 'value')
+        data = np.nan_to_num(data)
+
+        # 2. 拟合标准化器 (仅在训练集上 fit)
+        self.scaler.fit(data)
+        data = self.scaler.transform(data)
+
+        # 3. 加载测试数据 (Mixed)
+        test_data = pd.read_csv(os.path.join(root_path, 'test.csv'))
+        test_data = test_data.values[:, 0:]
+        test_data = np.nan_to_num(test_data)
+        self.test = self.scaler.transform(test_data)  # 使用训练集的 scaler 转换
+
+        self.train = data
+
+        # 验证集划分 (取训练集的后20%作为验证集，虽无监督通常只看重构loss)
+        data_len = len(self.train)
+        self.val = self.train[(int)(data_len * 0.8):]
+
+        # 4. 加载测试标签
+        self.test_labels = pd.read_csv(os.path.join(root_path, 'test_label.csv')).values[:, 0:]
+
+        print(f"CWRU_AD {flag} loader initialized.")
+        print("test shape:", self.test.shape)
+        print("train shape:", self.train.shape)
+
+    def __len__(self):
+        if self.flag == "train":
+            return (self.train.shape[0] - self.win_size) // self.step + 1
+        elif (self.flag == 'val'):
+            return (self.val.shape[0] - self.win_size) // self.step + 1
+        elif (self.flag == 'test'):
+            return (self.test.shape[0] - self.win_size) // self.step + 1
+        else:
+            return (self.test.shape[0] - self.win_size) // self.win_size + 1
+
+    def __getitem__(self, index):
+        index = index * self.step
+        if self.flag == "train":
+            return np.float32(self.train[index:index + self.win_size]), np.float32(self.test_labels[0:self.win_size])
+        elif (self.flag == 'val'):
+            return np.float32(self.val[index:index + self.win_size]), np.float32(self.test_labels[0:self.win_size])
+        elif (self.flag == 'test'):
+            return np.float32(self.test[index:index + self.win_size]), np.float32(
+                self.test_labels[index:index + self.win_size])
+        else:
+            return np.float32(self.test[
+                              index // self.step * self.win_size:index // self.step * self.win_size + self.win_size]), np.float32(
+                self.test_labels[index // self.step * self.win_size:index // self.step * self.win_size + self.win_size])
