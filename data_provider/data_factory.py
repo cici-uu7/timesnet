@@ -1,5 +1,5 @@
 from data_provider.data_loader import Dataset_ETT_hour, Dataset_ETT_minute, Dataset_Custom, Dataset_M4, PSMSegLoader, \
-    MSLSegLoader, SMAPSegLoader, SMDSegLoader, SWATSegLoader, UEAloader
+    MSLSegLoader, SMAPSegLoader, SMDSegLoader, SWATSegLoader, UEAloader,CWRUADLoader
 from data_provider.uea import collate_fn
 from data_provider.CWRU_dataset import Dataset_CWRU  # 导入CWRU数据集类
 from torch.utils.data import DataLoader
@@ -19,7 +19,8 @@ data_dict = {
     'SMD': SMDSegLoader,
     'SWAT': SWATSegLoader,
     'UEA': UEAloader,
-    'CWRU_10': Dataset_CWRU  # CWRU数据集映射
+    'CWRU_10': Dataset_CWRU, # CWRU数据集映射
+    'CWRU_AD': CWRUADLoader, # CWRU_AD数据集映射
 }
 
 
