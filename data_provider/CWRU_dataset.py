@@ -5,9 +5,19 @@ import numpy as np
 
 
 class Dataset_CWRU(Dataset):
-    def __init__(self, args, flag):
+    def __init__(self, args, root_path=None, flag='train'):
         self.flag = flag.upper()
-        self.df = args.train_data if self.flag == 'TRAIN' else args.test_data
+
+        # 兼容逻辑：args中的 train_file 优先，否则使用默认 TSV
+        # 注意：这里我们使用 args.root_path，确保路径正确
+        self.root_path = root_path if root_path else args.root_path
+
+        # 原有逻辑保持不变...
+        if self.flag == 'TRAIN':
+            self.df = args.train_data
+        else:
+            self.df = args.test_data
+
         self.seq_len = args.seq_len
         self.enc_in = args.enc_in
         self.features = args.features
