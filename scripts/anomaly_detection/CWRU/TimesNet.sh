@@ -1,7 +1,7 @@
 export CUDA_VISIBLE_DEVICES=0
 
 # 1. 运行预处理 (确保生成了 train.csv, test.csv)
-# python data_provider/preprocess_cwru_ad.py
+python ./data_processing_ad.py
 
 # 2. 运行 TimesNet
 python -u run.py \
